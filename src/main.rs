@@ -15,7 +15,24 @@ use clap::{App, Arg};
 
 const ARCHIVE_PROGRAM_CMD: &str = "7z";
 
-fn try_to_extract_file(file: &str, password: &str) -> std::io::Result<Output> {
+fn try_to_extract_file(
+    file: &str,    
+    password: &str,
+    extracted_file: &str
+) -> std::io::Result<Output> {
+    Command::new(ARCHIVE_PROGRAM_CMD)
+        .arg("e")        
+        .arg(format!("{}", file))
+        .arg(format!("{}", extracted_file))        
+        .arg(format!("-p{}", password))
+        .arg(format!("-y"))
+        .output()
+}
+
+fn try_to_list_files(
+    file: &str,
+    password: &str
+) -> std::io::Result<Output> {
     //This is designed for 7zip version 23.01 x64 (Linux)
     //The -ba switch isn't listed in the help output, but is
     //required to suppress other verbose log messages.
@@ -39,9 +56,15 @@ fn try_to_tokenize_lines(output: Output) -> Vec<String> {
         // Split the output into lines and tokenize each line
         for line in stdout.lines() {        
             // Split the line into tokens (whitespace delimited)
-            let tokens: Vec<&str> = line.split_whitespace().collect();            
-            let slice = tokens.last().unwrap();
-            output_lines.push(format!("{:?}", slice));
+            let tokens: Vec<&str> = line.split_whitespace().collect();
+
+            //This field(5) is specific to 7zip.
+            if tokens.len() < 4 {
+                continue;
+            }
+
+            let slice = tokens[4..].join(" ").replace("\"","").to_string();
+            output_lines.push(format!("{}", slice));
         }
     } else {
         eprintln!(
@@ -67,6 +90,10 @@ async fn main() -> std::result::Result<(), std::io::Error> {
             .index(1)
             .required(true)
             .help("Sets the input directory"))
+        .arg(Arg::with_name("extract")
+            .short('e')
+            .required(false)
+            .help("Extracts the files from the archive."))
         .arg(Arg::with_name("regex")
             .short('r')
             .required(false)
@@ -96,14 +123,26 @@ async fn main() -> std::result::Result<(), std::io::Error> {
         matches.value_of("directory").unwrap()
     );
 
+    let extract = matches.is_present("extract");
+    let mut extract_pattern : String = format!("{}", matches.value_of("regex").unwrap());
+
+    if extract_pattern == "" {
+        extract_pattern = format!(
+            ".*{}.*", 
+            matches.value_of("hash").unwrap()
+        );
+    }
+
     // Use the glob function to iterate over the matching files recursively
     for entry in glob(pattern.as_str())
         .expect("Failed to read glob pattern") 
     {
         match entry {
             Ok(path) => {
+                println!("Processing archive: {}", path.display());
+                
                 let files = try_to_tokenize_lines(
-                    try_to_extract_file(
+                    try_to_list_files(
                         path.to_str().unwrap(),
                         password
                     ).unwrap()
@@ -114,16 +153,37 @@ async fn main() -> std::result::Result<(), std::io::Error> {
                         if !regex::Regex::new(
                             format!(".*{}.*", matches.value_of("hash").unwrap()).as_str()
                         ).unwrap().is_match(format!("{}", file).as_str())
-                        {                            
+                        {
                             continue;
-                        }
-                        println!("Archive: {:?}, File: {}", path.display(), file);
+                        } else {
+                            println!("Archive: {:?}, File: {}", path.display(), file);
+                            if extract {
+                                let output = try_to_extract_file(
+                                    path.to_str().unwrap(),
+                                    password,
+                                    file.replace("\"","").as_str()                                    
+                                ).unwrap();
+                                if matches.is_present("verbose") {
+                                    println!("Output: {:?}", output);
+                                }
+                            }
+                        }                        
                     } else {
                         if regex::Regex::new(
                                 matches.value_of("regex").unwrap()
                             ).unwrap().is_match(format!("{}", file).as_str())
                         {
                             println!("Archive: {:?}, File: {}", path.display(), file);
+                            if extract {
+                                let output = try_to_extract_file(
+                                    path.to_str().unwrap(),
+                                    password,
+                                    file.replace("\"","").as_str()
+                                ).unwrap();
+                                if matches.is_present("verbose") {
+                                    println!("Output: {:?}", output);
+                                }
+                            }                        
                         }
                     }
                 }
