@@ -1,7 +1,7 @@
 # Bolt
 Bolt searches for 7-zip archive files and extracts only the filenames that match either a hash or regular expression.
 
-This tool is used to aid in the development of security products focused on analyzing artifacts from vx-underground.org and VirusSign.
+This tool is used to aid in the development of Linux security products focused on analyzing artifacts from vx-underground.org and VirusSign.
 
 # Usage
 Build with Cargo:
