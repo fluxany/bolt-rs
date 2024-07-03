@@ -94,8 +94,7 @@ fn try_to_tokenize_lines(output: Output) -> Vec<String> {
     output_lines
 }
 
-#[tokio::main]
-async fn main() -> std::result::Result<(), std::io::Error> {
+fn main() -> std::result::Result<(), std::io::Error> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() <= 1 {
