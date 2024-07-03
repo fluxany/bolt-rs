@@ -145,7 +145,9 @@ fn main() -> std::result::Result<(), std::io::Error> {
     {
         match entry {
             Ok(path) => {
-                println!("Processing archive: {}", path.display());
+                if matches.is_present("verbose") {
+                    println!("Processing archive: {}", path.display());
+                }
                 
                 let files = try_to_tokenize_lines(
                     try_to_list_files(
@@ -162,7 +164,7 @@ fn main() -> std::result::Result<(), std::io::Error> {
                         {
                             continue;
                         } else {
-                            println!("Archive: {:?}, File: {}", path.display(), file);
+                            println!("Extracting archive: {:?}, file: {}", path.display(), file);
                             if extract {
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
@@ -179,7 +181,7 @@ fn main() -> std::result::Result<(), std::io::Error> {
                                 matches.value_of("regex").unwrap()
                             ).unwrap().is_match(format!("{}", file).as_str())
                         {
-                            println!("Archive: {:?}, File: {}", path.display(), file);
+                            println!("Extracting archive: {:?}, file: {}", path.display(), file);
                             if extract {
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
