@@ -25,6 +25,7 @@ OPTIONS:
     -e                   Extracts the files from the archive.
     -h <hash>            Default hash for files. [default: ]
         --help           Print help information
+    -o <output>          Sets the output directory [default: .]
     -p <password>        Default password for files. [default: ]
     -r <regex>           Sets the regular expression to match files. [default: .*]
     -v                   Sets the level of verbosity
