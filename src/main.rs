@@ -20,29 +20,47 @@ fn try_to_extract_file(
     password: &str,
     extracted_file: &str
 ) -> std::io::Result<Output> {
-    Command::new(ARCHIVE_PROGRAM_CMD)
-        .arg("e")        
-        .arg(format!("{}", file))
-        .arg(format!("{}", extracted_file))        
-        .arg(format!("-p{}", password))
-        .arg(format!("-y"))
-        .output()
+    if password == "" {
+        return Command::new(ARCHIVE_PROGRAM_CMD)
+            .arg("e")        
+            .arg(format!("{}", file))
+            .arg(format!("{}", extracted_file))
+            .arg(format!("-y"))
+            .output();
+    } else {
+        Command::new(ARCHIVE_PROGRAM_CMD)
+            .arg("e")        
+            .arg(format!("{}", file))
+            .arg(format!("{}", extracted_file))
+            .arg(format!("-p{}", password))
+            .arg(format!("-y"))
+            .output()
+    }
 }
 
 fn try_to_list_files(
     file: &str,
     password: &str
-) -> std::io::Result<Output> {
-    //This is designed for 7zip version 23.01 x64 (Linux)
-    //The -ba switch isn't listed in the help output, but is
-    //required to suppress other verbose log messages.
-    Command::new(ARCHIVE_PROGRAM_CMD)
-        .arg("l")
-        .arg("-r")
-        .arg("-ba")
-        .arg(format!("-p{}", password))
-        .arg(format!("{}", file))
-        .output()
+) -> std::io::Result<Output> {    
+    if password == "" {
+        return Command::new(ARCHIVE_PROGRAM_CMD)
+            .arg("l")
+            .arg("-r")
+            .arg("-ba")
+            .arg(format!("{}", file))
+            .output();
+    } else {
+        //This is designed for 7zip version 23.01 x64 (Linux)
+        //The -ba switch isn't listed in the help output, but is
+        //required to suppress other verbose log messages.
+        Command::new(ARCHIVE_PROGRAM_CMD)
+            .arg("l")
+            .arg("-r")
+            .arg("-ba")
+            .arg(format!("-p{}", password))
+            .arg(format!("{}", file))
+            .output()
+    }
 }
 
 fn try_to_tokenize_lines(output: Output) -> Vec<String> {
