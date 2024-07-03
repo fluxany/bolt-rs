@@ -9,9 +9,10 @@ use clap::{App, Arg};
 const ARCHIVE_PROGRAM_CMD: &str = "7z";
 
 fn try_to_extract_file(
-    file: &str,    
+    file: &str,
     password: &str,
-    extracted_file: &str
+    extracted_file: &str,
+    output_directory: &str
 ) -> std::io::Result<Output> {
     if password == "" {
         return Command::new(ARCHIVE_PROGRAM_CMD)
@@ -19,6 +20,7 @@ fn try_to_extract_file(
             .arg(format!("{}", file))
             .arg(format!("{}", extracted_file))
             .arg(format!("-y"))
+            .arg(format!("-o{}", output_directory))
             .output();
     } else {
         Command::new(ARCHIVE_PROGRAM_CMD)
@@ -27,6 +29,7 @@ fn try_to_extract_file(
             .arg(format!("{}", extracted_file))
             .arg(format!("-p{}", password))
             .arg(format!("-y"))
+            .arg(format!("-o{}", output_directory))
             .output()
     }
 }
@@ -92,6 +95,11 @@ fn main() -> std::result::Result<(), std::io::Error> {
             .index(1)
             .required(true)
             .help("Sets the input directory"))
+        .arg(Arg::with_name("output")
+            .short('o')
+            .required(false)
+            .default_value(".")
+            .help("Sets the output directory"))
         .arg(Arg::with_name("extract")
             .short('e')
             .required(false)
@@ -119,7 +127,8 @@ fn main() -> std::result::Result<(), std::io::Error> {
 
     let password = matches.value_of("password").unwrap_or("");
     let directory = matches.value_of("directory").unwrap_or(".");
-    
+    let output_directory = matches.value_of("output").unwrap_or(".");
+
     // Define the pattern to match files recursively
     let mut pattern = format!(
         "{}/**/*.7z",
@@ -169,7 +178,8 @@ fn main() -> std::result::Result<(), std::io::Error> {
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
                                     password,
-                                    file.replace("\"","").as_str()                                    
+                                    file.replace("\"","").as_str(),
+                                    output_directory
                                 ).unwrap();
                                 if matches.is_present("verbose") {
                                     println!("Output: {:?}", output);
@@ -186,7 +196,8 @@ fn main() -> std::result::Result<(), std::io::Error> {
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
                                     password,
-                                    file.replace("\"","").as_str()
+                                    file.replace("\"","").as_str(),
+                                    output_directory
                                 ).unwrap();
                                 if matches.is_present("verbose") {
                                     println!("Output: {:?}", output);
