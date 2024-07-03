@@ -4,6 +4,7 @@
 
 use std::env;
 use std::io::{Error, Result};
+use std::fs;
 use std::fs::File;
 use std::io::{self, Read};
 use std::process::{Command, Output};
@@ -20,6 +21,7 @@ fn try_to_extract_file(
     password: &str,
     extracted_file: &str
 ) -> std::io::Result<Output> {
+    println!("File: \"{}\"", extracted_file);
     if password == "" {
         return Command::new(ARCHIVE_PROGRAM_CMD)
             .arg("e")        
@@ -73,15 +75,7 @@ fn try_to_tokenize_lines(output: Output) -> Vec<String> {
 
         // Split the output into lines and tokenize each line
         for line in stdout.lines() {        
-            // Split the line into tokens (whitespace delimited)
-            let tokens: Vec<&str> = line.split_whitespace().collect();
-
-            //This field(5) is specific to 7zip.
-            if tokens.len() < 4 {
-                continue;
-            }
-
-            let slice = tokens[4..].join(" ").replace("\"","").to_string();
+            let slice = line[53..].replace("\"","").to_string();
             output_lines.push(format!("{}", slice));
         }
     } else {
@@ -133,26 +127,30 @@ fn main() -> std::result::Result<(), std::io::Error> {
         .get_matches();
 
     let password = matches.value_of("password").unwrap_or("");
-
+    let directory = matches.value_of("directory").unwrap_or(".");
+    
     // Define the pattern to match files recursively
-    let pattern = format!(
+    let mut pattern = format!(
         "{}/**/*.7z",
         matches.value_of("directory").unwrap()
     );
 
-    let extract = matches.is_present("extract");
-    let mut extract_pattern : String = format!("{}", matches.value_of("regex").unwrap());
-
-    if extract_pattern == "" {
-        extract_pattern = format!(
-            ".*{}.*", 
-            matches.value_of("hash").unwrap()
-        );
+    match fs::metadata(directory) {
+        Ok(metadata) => {
+            if metadata.is_file() {
+                pattern = format!("{}", directory);
+            }
+        },
+        Err(e) => {
+            eprintln!("Error: {:?}", e);
+        }
     }
 
+    let extract = matches.is_present("extract");    
+    let entries = glob(pattern.as_str()).expect("Failed to read glob pattern");
+
     // Use the glob function to iterate over the matching files recursively
-    for entry in glob(pattern.as_str())
-        .expect("Failed to read glob pattern") 
+    for entry in entries
     {
         match entry {
             Ok(path) => {
