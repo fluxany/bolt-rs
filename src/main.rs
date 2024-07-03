@@ -1,14 +1,6 @@
-#![allow(unused_assignments)]
-#![allow(unused_imports)]
-#![allow(dead_code)]
-
 use std::env;
-use std::io::{Error, Result};
 use std::fs;
-use std::fs::File;
-use std::io::{self, Read};
 use std::process::{Command, Output};
-use std::path::Path;
 
 use regex;
 use glob::glob;
