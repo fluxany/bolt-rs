@@ -21,7 +21,6 @@ fn try_to_extract_file(
     password: &str,
     extracted_file: &str
 ) -> std::io::Result<Output> {
-    println!("File: \"{}\"", extracted_file);
     if password == "" {
         return Command::new(ARCHIVE_PROGRAM_CMD)
             .arg("e")        
