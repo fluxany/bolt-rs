@@ -104,6 +104,11 @@ fn main() -> std::result::Result<(), std::io::Error> {
             .short('e')
             .required(false)
             .help("Extracts the files from the archive."))
+        .arg(Arg::with_name("term")
+            .short('t')
+            .required(false)
+            .default_value(".*")
+            .help("Sets the file name term to match files."))
         .arg(Arg::with_name("regex")
             .short('r')
             .required(false)
@@ -166,9 +171,9 @@ fn main() -> std::result::Result<(), std::io::Error> {
                 );
 
                 for file in files {
-                    if matches.value_of("hash").unwrap() != "" {
+                    if matches.value_of("term").unwrap() != "" {
                         if !regex::Regex::new(
-                            format!(".*{}.*", matches.value_of("hash").unwrap()).as_str()
+                            format!(".*{}.*", matches.value_of("term").unwrap()).as_str()
                         ).unwrap().is_match(format!("{}", file).as_str())
                         {
                             continue;
