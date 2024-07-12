@@ -16,7 +16,7 @@ bolt
 Bolt Archive File Search
 
 USAGE:
-    bolt [OPTIONS] <directory>
+    bolt.exe [OPTIONS] <directory>
 
 ARGS:
     <directory>    Sets the input directory
@@ -25,9 +25,11 @@ OPTIONS:
     -e                   Extracts the files from the archive.
     -h <hash>            Default hash for files. [default: ]
         --help           Print help information
+    -i                   Inverts all bits of the output file.
     -o <output>          Sets the output directory [default: .]
     -p <password>        Default password for files. [default: ]
     -r <regex>           Sets the regular expression to match files. [default: .*]
+    -t <term>            Sets the file name term to match files. [default: .*]
     -v                   Sets the level of verbosity
 
 cargo run -- -h hash -pinfected --extract --verbose "/mnt/drive/somefolder"
