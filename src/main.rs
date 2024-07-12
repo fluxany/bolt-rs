@@ -1,6 +1,12 @@
 use std::env;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::{Read, Write, Seek, SeekFrom};
 use std::process::{Command, Output};
+use std::path::PathBuf;
+
+#[cfg(target_os = "linux")]
+use std::os::unix::fs::PermissionsExt;
 
 use regex;
 use glob::glob;
@@ -8,20 +14,44 @@ use clap::{App, Arg};
 
 const ARCHIVE_PROGRAM_CMD: &str = "7z";
 
+fn try_to_invert_bits(
+    file: &str
+) -> std::io::Result<()> {    
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(file)?;
+
+    let mut buffer = Vec::new();
+
+    file.read_to_end(&mut buffer)?;
+    
+    for byte in buffer.iter_mut() {
+        *byte = !*byte;
+    }
+
+    file.seek(SeekFrom::Start(0))?;
+    file.write_all(&buffer)?;
+    file.flush()?;
+
+    Ok(())
+}
+
 fn try_to_extract_file(
     file: &str,
     password: &str,
     extracted_file: &str,
-    output_directory: &str
+    output_directory: &str,
+    invert_bits: bool
 ) -> std::io::Result<Output> {
-    if password == "" {
-        return Command::new(ARCHIVE_PROGRAM_CMD)
+    let output = if password == "" {
+        Command::new(ARCHIVE_PROGRAM_CMD)
             .arg("e")        
             .arg(format!("{}", file))
             .arg(format!("{}", extracted_file))
             .arg(format!("-y"))
             .arg(format!("-o{}", output_directory))
-            .output();
+            .output()
     } else {
         Command::new(ARCHIVE_PROGRAM_CMD)
             .arg("e")        
@@ -31,13 +61,49 @@ fn try_to_extract_file(
             .arg(format!("-y"))
             .arg(format!("-o{}", output_directory))
             .output()
+    };
+
+    //Invert all bits in buffer
+    if invert_bits {
+        let mut path = PathBuf::from(output_directory);
+        path.push(extracted_file);
+        
+        if path.exists() {
+            //Change permissions to writeable on windows
+            #[cfg(target_os = "windows")]
+            {
+                let mut perms = fs::metadata(&path)?.permissions();
+                perms.set_readonly(false);
+                fs::set_permissions(&path, perms)?;
+            }
+
+            //Change permissions to writeable on Linux
+            #[cfg(target_os = "linux")]
+            {
+                let mut perms = fs::metadata(&path)?.permissions();
+                perms.set_mode(0o777);
+                fs::set_permissions(&path, perms)?;
+            }
+
+            // When needing to use the path as a String (e.g., in `try_to_invert_bits` function):
+            match try_to_invert_bits(path.to_str().unwrap()) {
+                Ok(_) => {},
+                Err(e) => {
+                    eprintln!("Error inverting bits: {:?}", e);
+                }
+            }    
+        } else {
+            eprintln!("Path does not exist: {:?}", path);
+        }        
     }
+
+    output
 }
 
 fn try_to_list_files(
     file: &str,
     password: &str
-) -> std::io::Result<Output> {    
+) -> std::io::Result<Output> {
     if password == "" {
         return Command::new(ARCHIVE_PROGRAM_CMD)
             .arg("l")
@@ -49,13 +115,13 @@ fn try_to_list_files(
         //This is designed for 7zip version 23.01 x64 (Linux)
         //The -ba switch isn't listed in the help output, but is
         //required to suppress other verbose log messages.
-        Command::new(ARCHIVE_PROGRAM_CMD)
+        return Command::new(ARCHIVE_PROGRAM_CMD)
             .arg("l")
             .arg("-r")
             .arg("-ba")
             .arg(format!("-p{}", password))
             .arg(format!("{}", file))
-            .output()
+            .output();
     }
 }
 
@@ -104,6 +170,10 @@ fn main() -> std::result::Result<(), std::io::Error> {
             .short('e')
             .required(false)
             .help("Extracts the files from the archive."))
+        .arg(Arg::with_name("invert")
+            .short('i')
+            .required(false)
+            .help("Inverts all bits of the output file."))
         .arg(Arg::with_name("term")
             .short('t')
             .required(false)
@@ -133,6 +203,7 @@ fn main() -> std::result::Result<(), std::io::Error> {
     let password = matches.value_of("password").unwrap_or("");
     let directory = matches.value_of("directory").unwrap_or(".");
     let output_directory = matches.value_of("output").unwrap_or(".");
+    let invert_bits = matches.is_present("invert");
 
     // Define the pattern to match files recursively
     let mut pattern = format!(
@@ -184,7 +255,8 @@ fn main() -> std::result::Result<(), std::io::Error> {
                                     path.to_str().unwrap(),
                                     password,
                                     file.replace("\"","").as_str(),
-                                    output_directory
+                                    output_directory,
+                                    invert_bits
                                 ).unwrap();
                                 if matches.is_present("verbose") {
                                     println!("Output: {:?}", output);
@@ -202,7 +274,8 @@ fn main() -> std::result::Result<(), std::io::Error> {
                                     path.to_str().unwrap(),
                                     password,
                                     file.replace("\"","").as_str(),
-                                    output_directory
+                                    output_directory,
+                                    invert_bits
                                 ).unwrap();
                                 if matches.is_present("verbose") {
                                     println!("Output: {:?}", output);
