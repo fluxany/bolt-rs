@@ -81,7 +81,7 @@ fn try_to_extract_file(
             #[cfg(target_os = "linux")]
             {
                 let mut perms = fs::metadata(&path)?.permissions();
-                perms.set_mode(0o777);
+                perms.set_mode(0o666);
                 fs::set_permissions(&path, perms)?;
             }
 
