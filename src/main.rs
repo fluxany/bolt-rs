@@ -216,7 +216,7 @@ fn main() -> std::result::Result<(), std::io::Error> {
             .short('h')
             .required(false)
             .default_value("")
-            .help("Default hash for files."))
+            .help("Default hash for files. (unused)"))
         .get_matches();
 
     let password = matches.value_of("password").unwrap_or("");
@@ -267,9 +267,9 @@ fn main() -> std::result::Result<(), std::io::Error> {
                         ).unwrap().is_match(format!("{}", file).as_str())
                         {
                             continue;
-                        } else {
-                            println!("Extracting archive: {:?}, file: {}", path.display(), file);
+                        } else {                            
                             if extract {
+                                println!("Extracting archive: {:?}, file: {}", path.display(), file);
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
                                     password,
@@ -286,9 +286,9 @@ fn main() -> std::result::Result<(), std::io::Error> {
                         if regex::Regex::new(
                                 matches.value_of("regex").unwrap()
                             ).unwrap().is_match(format!("{}", file).as_str())
-                        {
-                            println!("Extracting archive: {:?}, file: {}", path.display(), file);
+                        {                            
                             if extract {
+                                println!("Extracting archive: {:?}, file: {}", path.display(), file);
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
                                     password,
