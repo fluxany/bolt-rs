@@ -37,6 +37,7 @@ fn try_to_invert_bits(
 
     file.read_to_end(&mut buffer)?;
     
+    // Invert all bits in the buffer.
     for byte in buffer.iter_mut() {
         *byte = !*byte;
     }
