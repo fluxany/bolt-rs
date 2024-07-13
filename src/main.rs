@@ -23,6 +23,8 @@ use clap::{App, Arg};
 
 const ARCHIVE_PROGRAM_CMD: &str = "7z";
 
+/// Inverts all bits in a file after opening for read/write.
+/// This method fails if the file cannot be opened for writing.
 fn try_to_invert_bits(
     file: &str
 ) -> std::io::Result<()> {    
@@ -46,6 +48,8 @@ fn try_to_invert_bits(
     Ok(())
 }
 
+/// Extracts a file from an archive using the 7z program.
+/// This method returns the output of the command regardless of success.
 fn try_to_extract_file(
     file: &str,
     password: &str,
@@ -109,6 +113,8 @@ fn try_to_extract_file(
     output
 }
 
+/// Lists all files in an archive using the 7z program.
+/// This method returns the output of the command regardless of success.
 fn try_to_list_files(
     file: &str,
     password: &str
@@ -134,6 +140,7 @@ fn try_to_list_files(
     }
 }
 
+/// Helper function to tokenize the output of a command.
 fn try_to_tokenize_lines(output: Output) -> Vec<String> {
     let mut output_lines = Vec::new();
 
@@ -157,6 +164,8 @@ fn try_to_tokenize_lines(output: Output) -> Vec<String> {
     output_lines
 }
 
+/// Main function of the program.
+/// Accepts command line options and processes the archive files as they are found.
 fn main() -> std::result::Result<(), std::io::Error> {
     let args: Vec<String> = env::args().collect();
 
