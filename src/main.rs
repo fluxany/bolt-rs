@@ -19,7 +19,9 @@ use std::os::unix::fs::PermissionsExt;
 
 use regex;
 use glob::glob;
-use clap::{App, Arg};
+use clap::Parser;
+
+mod manifest;
 
 const ARCHIVE_PROGRAM_CMD: &str = "7z";
 
@@ -211,6 +213,39 @@ fn try_to_tokenize_lines(output: Output) -> Vec<String> {
     output_lines
 }
 
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(required = true, default_value = ".")]
+    directory: String,
+
+    #[arg(short, long, help = "Sets the manifest file to generate.")]
+    manifest: bool,
+
+    #[arg(short, long, help = "Extracts all files from the archive.")]
+    all: bool,
+
+    #[arg(short, long, help = "Inverts all bits of the output file.")]
+    invert: bool,
+
+    #[arg(short, long, help = "Increase verbosity.")]
+    verbose: bool,
+
+    #[arg(short, long, help = "Extracts the files from the archive.")]
+    extract: bool,
+
+    #[arg(short, long, default_value = ".", help = "Sets the output directory.")]
+    output: String,
+
+    #[arg(short, long, default_value = ".*", help = "Sets the regular expression to match files.")]
+    regex: String,
+
+    #[arg(short, long, help = "Sets the file name term to match files.")]
+    term: String,
+
+    #[arg(short, long, default_value = "", help = "Use archive password.")]
+    password: String,
+}
+
 /// Main function of the program.
 /// Accepts command line options and processes the archive files as they are found.
 fn main() -> std::result::Result<(), std::io::Error> {
@@ -220,71 +255,24 @@ fn main() -> std::result::Result<(), std::io::Error> {
         return Ok(());
     }
 
-    let matches = App::new("bolt")
-        .about("Bolt Archive File Search")
-        .arg(Arg::with_name("directory")
-            .index(1)
-            .required(true)
-            .help("Sets the input directory"))
-        .arg(Arg::with_name("output")
-            .short('o')
-            .required(false)
-            .default_value(".")
-            .help("Sets the output directory"))
-        .arg(Arg::with_name("extract")
-            .short('e')
-            .required(false)
-            .help("Extracts the files from the archive."))
-        .arg(Arg::with_name("all")
-            .short('a')
-            .required(false)
-            .help("Extracts all files from the archive."))
-        .arg(Arg::with_name("invert")
-            .short('i')
-            .required(false)
-            .help("Inverts all bits of the output file."))
-        .arg(Arg::with_name("term")
-            .short('t')
-            .required(false)
-            .default_value(".*")
-            .help("Sets the file name term to match files."))
-        .arg(Arg::with_name("regex")
-            .short('r')
-            .required(false)
-            .default_value(".*")
-            .help("Sets the regular expression to match files."))
-        .arg(Arg::with_name("verbose")
-            .short('v')
-            .required(false)
-            .help("Sets the level of verbosity"))
-        .arg(Arg::with_name("password")
-            .short('p')
-            .required(false)
-            .default_value("")
-            .help("Default password for files."))
-        .arg(Arg::with_name("hash")
-            .short('h')
-            .required(false)
-            .default_value("")
-            .help("Default hash for files. (unused)"))
-        .get_matches();
+    let args = Args::parse();
 
-    let password = matches.value_of("password").unwrap_or("");
-    let directory = matches.value_of("directory").unwrap_or(".");
-    let output_directory = matches.value_of("output").unwrap_or(".");
-    let invert_bits = matches.is_present("invert");
-    let extract_all = matches.is_present("all");
+    let password = args.password;
+    let directory = args.directory;
+    let output_directory = args.output;
+    let invert_bits = args.invert;
+    let extract_all = args.all;
 
     // Define the pattern to match files recursively
     let mut pattern = format!(
         "{}/**/*.7z",
-        matches.value_of("directory").unwrap()
+        directory
     );
 
-    match fs::metadata(directory) {
+    match fs::metadata(directory.clone()) {
         Ok(metadata) => {
             if metadata.is_file() {
-                pattern = format!("{}", directory);
+                pattern = format!("{}", &directory);
             }
         },
         Err(e) => {
@@ -292,7 +280,7 @@ fn main() -> std::result::Result<(), std::io::Error> {
         }
     }
 
-    let extract = matches.is_present("extract");    
+    let extract = args.extract;    
     let entries = glob(pattern.as_str()).expect("Failed to read glob pattern");
 
     // Use the glob function to iterate over the matching files recursively
@@ -300,21 +288,21 @@ fn main() -> std::result::Result<(), std::io::Error> {
     {
         match entry {
             Ok(path) => {
-                if matches.is_present("verbose") {
+                if args.verbose {
                     println!("Processing archive: {}", path.display());
                 }
                 
                 let files = try_to_tokenize_lines(
                     try_to_list_files(
                         path.to_str().unwrap(),
-                        password
+                        password.as_str()
                     ).unwrap()
                 );
 
                 for file in files {
-                    if matches.value_of("term").unwrap() != "" {
+                    if args.term != "" {
                         if !regex::Regex::new(
-                            format!(".*{}.*", matches.value_of("term").unwrap()).as_str()
+                            format!(".*{}.*", args.term).as_str()
                         ).unwrap().is_match(format!("{}", file).as_str())
                         {
                             continue;
@@ -323,33 +311,33 @@ fn main() -> std::result::Result<(), std::io::Error> {
                                 println!("Extracting archive: {:?}, file: {}", path.display(), file);
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
-                                    password,
+                                    password.as_str(),
                                     file.replace("\"","").as_str(),
-                                    output_directory,
+                                    output_directory.as_str(),
                                     invert_bits,
                                     extract_all
                                 ).unwrap();
-                                if matches.is_present("verbose") {
+                                if args.verbose {
                                     println!("Output: {:?}", output);
                                 }
                             }
                         }                        
                     } else {
                         if regex::Regex::new(
-                                matches.value_of("regex").unwrap()
+                                args.regex.as_str()
                             ).unwrap().is_match(format!("{}", file).as_str())
                         {                            
                             if extract {
                                 println!("Extracting archive: {:?}, file: {}", path.display(), file);
                                 let output = try_to_extract_file(
                                     path.to_str().unwrap(),
-                                    password,
+                                    password.as_str(),
                                     file.replace("\"","").as_str(),
-                                    output_directory,
+                                    output_directory.as_str(),
                                     invert_bits,
                                     extract_all
                                 ).unwrap();
-                                if matches.is_present("verbose") {
+                                if args.verbose {
                                     println!("Output: {:?}", output);
                                 }
                             }                        
