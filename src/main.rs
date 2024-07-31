@@ -21,7 +21,7 @@ use regex;
 use glob::glob;
 use clap::Parser;
 
-mod manifest;
+//mod manifest;
 
 const ARCHIVE_PROGRAM_CMD: &str = "7z";
 
