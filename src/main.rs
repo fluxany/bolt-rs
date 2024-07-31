@@ -239,7 +239,7 @@ struct Args {
     #[arg(short, long, default_value = ".*", help = "Sets the regular expression to match files.")]
     regex: String,
 
-    #[arg(short, long, help = "Sets the file name term to match files.")]
+    #[arg(required = false, short, long, help = "Sets the file name term to match files.")]
     term: String,
 
     #[arg(short, long, default_value = "", help = "Use archive password.")]
