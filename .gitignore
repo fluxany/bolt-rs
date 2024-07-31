@@ -1,2 +1,8 @@
 /target
 *.lock
+*.7z
+file*
+tmp/**
+tmp
+output/**
+output
